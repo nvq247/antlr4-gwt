@@ -1,34 +1,64 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2012 Terence Parr
+ *  Copyright (c) 2012 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package org.antlr.v4.runtime;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.antlr.v4.runtime.atn.ATN;
 import org.antlr.v4.runtime.atn.ATNSimulator;
 import org.antlr.v4.runtime.atn.ParseInfo;
+import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.misc.Nullable;
 import org.antlr.v4.runtime.misc.Utils;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	public static final int EOF=-1;
 
 	private static final Map<Vocabulary, Map<String, Integer>> tokenTypeMapCache =
-		new WeakHashMap<Vocabulary, Map<String, Integer>>();
+		new HashMap<Vocabulary, Map<String, Integer>>();
 	private static final Map<String[], Map<String, Integer>> ruleIndexMapCache =
-		new WeakHashMap<String[], Map<String, Integer>>();
+		new HashMap<String[], Map<String, Integer>>();
 
-
+	@NotNull
 	private List<ANTLRErrorListener> _listeners =
-		new CopyOnWriteArrayList<ANTLRErrorListener>() {{
+		new ArrayList<ANTLRErrorListener>() {{
 			add(ConsoleErrorListener.INSTANCE);
 		}};
 
@@ -53,6 +83,7 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	 * @return A {@link Vocabulary} instance providing information about the
 	 * vocabulary used by the grammar.
 	 */
+	@NotNull
 	@SuppressWarnings("deprecation")
 	public Vocabulary getVocabulary() {
 		return VocabularyImpl.fromTokenNames(getTokenNames());
@@ -63,13 +94,14 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	 *
 	 * <p>Used for XPath and tree pattern compilation.</p>
 	 */
+	@NotNull
 	public Map<String, Integer> getTokenTypeMap() {
 		Vocabulary vocabulary = getVocabulary();
 		synchronized (tokenTypeMapCache) {
 			Map<String, Integer> result = tokenTypeMapCache.get(vocabulary);
 			if (result == null) {
 				result = new HashMap<String, Integer>();
-				for (int i = 0; i <= getATN().maxTokenType; i++) {
+				for (int i = 0; i < getATN().maxTokenType; i++) {
 					String literalName = vocabulary.getLiteralName(i);
 					if (literalName != null) {
 						result.put(literalName, i);
@@ -95,6 +127,7 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	 *
 	 * <p>Used for XPath and tree pattern compilation.</p>
 	 */
+	@NotNull
 	public Map<String, Integer> getRuleIndexMap() {
 		String[] ruleNames = getRuleNames();
 		if (ruleNames == null) {
@@ -125,6 +158,7 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	 * <p>For interpreters, we don't know their serialized ATN despite having
 	 * created the interpreter from it.</p>
 	 */
+	@NotNull
 	public String getSerializedATN() {
 		throw new UnsupportedOperationException("there is no serialized ATN");
 	}
@@ -139,6 +173,7 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	 *
 	 * @return The {@link ATN} used by the recognizer for prediction.
 	 */
+	@NotNull
 	public abstract ATN getATN();
 
 	/**
@@ -146,6 +181,7 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	 *
 	 * @return The ATN interpreter used by the recognizer for prediction.
 	 */
+	@NotNull
 	public ATNInterpreter getInterpreter() {
 		return _interp;
 	}
@@ -165,12 +201,13 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	 * @param interpreter The ATN interpreter used by the recognizer for
 	 * prediction.
 	 */
-	public void setInterpreter(ATNInterpreter interpreter) {
+	public void setInterpreter(@NotNull ATNInterpreter interpreter) {
 		_interp = interpreter;
 	}
 
 	/** What is the error header, normally line/character position information? */
-	public String getErrorHeader(RecognitionException e) {
+	@NotNull
+	public String getErrorHeader(@NotNull RecognitionException e) {
 		int line = e.getOffendingToken().getLine();
 		int charPositionInLine = e.getOffendingToken().getCharPositionInLine();
 		return "line "+line+":"+charPositionInLine;
@@ -210,7 +247,7 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 	/**
 	 * @exception NullPointerException if {@code listener} is {@code null}.
 	 */
-	public void addErrorListener(ANTLRErrorListener listener) {
+	public void addErrorListener(@NotNull ANTLRErrorListener listener) {
 		if (listener == null) {
 			throw new NullPointerException("listener cannot be null.");
 		}
@@ -218,7 +255,7 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 		_listeners.add(listener);
 	}
 
-	public void removeErrorListener(ANTLRErrorListener listener) {
+	public void removeErrorListener(@NotNull ANTLRErrorListener listener) {
 		_listeners.remove(listener);
 	}
 
@@ -226,7 +263,7 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 		_listeners.clear();
 	}
 
-
+	@NotNull
 	public List<? extends ANTLRErrorListener> getErrorListeners() {
 		return _listeners;
 	}
@@ -237,15 +274,15 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 
 	// subclass needs to override these if there are sempreds or actions
 	// that the ATN interp needs to execute
-	public boolean sempred(RuleContext _localctx, int ruleIndex, int actionIndex) {
+	public boolean sempred(@Nullable RuleContext _localctx, int ruleIndex, int actionIndex) {
 		return true;
 	}
 
-	public boolean precpred(RuleContext localctx, int precedence) {
+	public boolean precpred(@Nullable RuleContext localctx, int precedence) {
 		return true;
 	}
 
-	public void action(RuleContext _localctx, int ruleIndex, int actionIndex) {
+	public void action(@Nullable RuleContext _localctx, int ruleIndex, int actionIndex) {
 	}
 
 	public final int getState() {
@@ -269,8 +306,8 @@ public abstract class Recognizer<Symbol, ATNInterpreter extends ATNSimulator> {
 
 	public abstract void setInputStream(IntStream input);
 
-
+	@NotNull
 	public abstract TokenFactory<?> getTokenFactory();
 
-	public abstract void setTokenFactory(TokenFactory<?> input);
+	public abstract void setTokenFactory(@NotNull TokenFactory<?> input);
 }

@@ -1,7 +1,31 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2012 Terence Parr
+ *  Copyright (c) 2012 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package org.antlr.v4.runtime;
@@ -11,6 +35,8 @@ import org.antlr.v4.runtime.atn.DecisionInfo;
 import org.antlr.v4.runtime.atn.ParserATNSimulator;
 import org.antlr.v4.runtime.atn.PredictionMode;
 import org.antlr.v4.runtime.dfa.DFA;
+import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.misc.Nullable;
 
 import java.util.BitSet;
 
@@ -49,12 +75,12 @@ public interface ANTLRErrorListener {
 	 *        the parser was able to recover in line without exiting the
 	 *        surrounding rule.
 	 */
-	public void syntaxError(Recognizer<?, ?> recognizer,
-							Object offendingSymbol,
+	public void syntaxError(@NotNull Recognizer<?, ?> recognizer,
+							@Nullable Object offendingSymbol,
 							int line,
 							int charPositionInLine,
-							String msg,
-							RecognitionException e);
+							@NotNull String msg,
+							@Nullable RecognitionException e);
 
 	/**
 	 * This method is called by the parser when a full-context prediction
@@ -96,13 +122,13 @@ public interface ANTLRErrorListener {
 	 * @param configs the ATN configuration set where the ambiguity was
 	 * identified
 	 */
-	void reportAmbiguity(Parser recognizer,
-						 DFA dfa,
+	void reportAmbiguity(@NotNull Parser recognizer,
+						 @NotNull DFA dfa,
 						 int startIndex,
 						 int stopIndex,
 						 boolean exact,
-						 BitSet ambigAlts,
-						 ATNConfigSet configs);
+						 @Nullable BitSet ambigAlts,
+						 @NotNull ATNConfigSet configs);
 
 	/**
 	 * This method is called when an SLL conflict occurs and the parser is about
@@ -127,12 +153,12 @@ public interface ANTLRErrorListener {
 	 * @param configs the ATN configuration set where the SLL conflict was
 	 * detected
 	 */
-	void reportAttemptingFullContext(Parser recognizer,
-									 DFA dfa,
+	void reportAttemptingFullContext(@NotNull Parser recognizer,
+									 @NotNull DFA dfa,
 									 int startIndex,
 									 int stopIndex,
-									 BitSet conflictingAlts,
-									 ATNConfigSet configs);
+									 @Nullable BitSet conflictingAlts,
+									 @NotNull ATNConfigSet configs);
 
 	/**
 	 * This method is called by the parser when a full-context prediction has a
@@ -172,10 +198,10 @@ public interface ANTLRErrorListener {
 	 * @param configs the ATN configuration set where the unambiguous prediction
 	 * was determined
 	 */
-	void reportContextSensitivity(Parser recognizer,
-								  DFA dfa,
+	void reportContextSensitivity(@NotNull Parser recognizer,
+								  @NotNull DFA dfa,
 								  int startIndex,
 								  int stopIndex,
 								  int prediction,
-								  ATNConfigSet configs);
+								  @NotNull ATNConfigSet configs);
 }

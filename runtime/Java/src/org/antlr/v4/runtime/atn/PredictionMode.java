@@ -1,7 +1,31 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2012 Terence Parr
+ *  Copyright (c) 2012 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package org.antlr.v4.runtime.atn;
@@ -9,6 +33,7 @@ package org.antlr.v4.runtime.atn;
 import org.antlr.v4.runtime.misc.AbstractEqualityComparator;
 import org.antlr.v4.runtime.misc.FlexibleHashMap;
 import org.antlr.v4.runtime.misc.MurmurHash;
+import org.antlr.v4.runtime.misc.NotNull;
 
 import java.util.BitSet;
 import java.util.Collection;
@@ -209,7 +234,7 @@ public enum PredictionMode {
 	 * the configurations to strip out all of the predicates so that a standard
 	 * {@link ATNConfigSet} will merge everything ignoring predicates.</p>
 	 */
-	public static boolean hasSLLConflictTerminatingPrediction(PredictionMode mode, ATNConfigSet configs) {
+	public static boolean hasSLLConflictTerminatingPrediction(PredictionMode mode, @NotNull ATNConfigSet configs) {
 		/* Configs in rule stop states indicate reaching the end of the decision
 		 * rule (local context) or end of start rule (full context). If all
 		 * configs meet this condition, then none of the configurations is able
@@ -274,7 +299,7 @@ public enum PredictionMode {
 	 * @return {@code true} if all configurations in {@code configs} are in a
 	 * {@link RuleStopState}, otherwise {@code false}
 	 */
-	public static boolean allConfigsInRuleStopStates(ATNConfigSet configs) {
+	public static boolean allConfigsInRuleStopStates(@NotNull ATNConfigSet configs) {
 		for (ATNConfig config : configs) {
 			if (!(config.state instanceof RuleStopState)) {
 				return false;
@@ -425,7 +450,7 @@ public enum PredictionMode {
 	 * we need exact ambiguity detection when the sets look like
 	 * {@code A={{1,2}}} or {@code {{1,2},{1,2}}}, etc...</p>
 	 */
-	public static int resolvesToJustOneViableAlt(Collection<BitSet> altsets) {
+	public static int resolvesToJustOneViableAlt(@NotNull Collection<BitSet> altsets) {
 		return getSingleViableAlt(altsets);
 	}
 
@@ -437,7 +462,7 @@ public enum PredictionMode {
 	 * @return {@code true} if every {@link BitSet} in {@code altsets} has
 	 * {@link BitSet#cardinality cardinality} &gt; 1, otherwise {@code false}
 	 */
-	public static boolean allSubsetsConflict(Collection<BitSet> altsets) {
+	public static boolean allSubsetsConflict(@NotNull Collection<BitSet> altsets) {
 		return !hasNonConflictingAltSet(altsets);
 	}
 
@@ -449,7 +474,7 @@ public enum PredictionMode {
 	 * @return {@code true} if {@code altsets} contains a {@link BitSet} with
 	 * {@link BitSet#cardinality cardinality} 1, otherwise {@code false}
 	 */
-	public static boolean hasNonConflictingAltSet(Collection<BitSet> altsets) {
+	public static boolean hasNonConflictingAltSet(@NotNull Collection<BitSet> altsets) {
 		for (BitSet alts : altsets) {
 			if ( alts.cardinality()==1 ) {
 				return true;
@@ -466,7 +491,7 @@ public enum PredictionMode {
 	 * @return {@code true} if {@code altsets} contains a {@link BitSet} with
 	 * {@link BitSet#cardinality cardinality} &gt; 1, otherwise {@code false}
 	 */
-	public static boolean hasConflictingAltSet(Collection<BitSet> altsets) {
+	public static boolean hasConflictingAltSet(@NotNull Collection<BitSet> altsets) {
 		for (BitSet alts : altsets) {
 			if ( alts.cardinality()>1 ) {
 				return true;
@@ -482,7 +507,7 @@ public enum PredictionMode {
 	 * @return {@code true} if every member of {@code altsets} is equal to the
 	 * others, otherwise {@code false}
 	 */
-	public static boolean allSubsetsEqual(Collection<BitSet> altsets) {
+	public static boolean allSubsetsEqual(@NotNull Collection<BitSet> altsets) {
 		Iterator<BitSet> it = altsets.iterator();
 		BitSet first = it.next();
 		while ( it.hasNext() ) {
@@ -499,7 +524,7 @@ public enum PredictionMode {
 	 *
 	 * @param altsets a collection of alternative subsets
 	 */
-	public static int getUniqueAlt(Collection<BitSet> altsets) {
+	public static int getUniqueAlt(@NotNull Collection<BitSet> altsets) {
 		BitSet all = getAlts(altsets);
 		if ( all.cardinality()==1 ) return all.nextSetBit(0);
 		return ATN.INVALID_ALT_NUMBER;
@@ -513,25 +538,12 @@ public enum PredictionMode {
 	 * @param altsets a collection of alternative subsets
 	 * @return the set of represented alternatives in {@code altsets}
 	 */
-	public static BitSet getAlts(Collection<BitSet> altsets) {
+	public static BitSet getAlts(@NotNull Collection<BitSet> altsets) {
 		BitSet all = new BitSet();
 		for (BitSet alts : altsets) {
 			all.or(alts);
 		}
 		return all;
-	}
-
-	/**
-	 * Get union of all alts from configs.
-	 *
-	 * @since 4.5.1
-	 */
-	public static BitSet getAlts(ATNConfigSet configs) {
-		BitSet alts = new BitSet();
-		for (ATNConfig config : configs) {
-			alts.set(config.alt);
-		}
-		return alts;
 	}
 
 	/**
@@ -543,7 +555,8 @@ public enum PredictionMode {
 	 * alt and not pred
 	 * </pre>
 	 */
-	public static Collection<BitSet> getConflictingAltSubsets(ATNConfigSet configs) {
+	@NotNull
+	public static Collection<BitSet> getConflictingAltSubsets(@NotNull ATNConfigSet configs) {
 		AltAndContextMap configToAlts = new AltAndContextMap();
 		for (ATNConfig c : configs) {
 			BitSet alts = configToAlts.get(c);
@@ -564,7 +577,8 @@ public enum PredictionMode {
 	 * map[c.{@link ATNConfig#state state}] U= c.{@link ATNConfig#alt alt}
 	 * </pre>
 	 */
-	public static Map<ATNState, BitSet> getStateToAltMap(ATNConfigSet configs) {
+	@NotNull
+	public static Map<ATNState, BitSet> getStateToAltMap(@NotNull ATNConfigSet configs) {
 		Map<ATNState, BitSet> m = new HashMap<ATNState, BitSet>();
 		for (ATNConfig c : configs) {
 			BitSet alts = m.get(c.state);
@@ -577,7 +591,7 @@ public enum PredictionMode {
 		return m;
 	}
 
-	public static boolean hasStateAssociatedWithOneAlt(ATNConfigSet configs) {
+	public static boolean hasStateAssociatedWithOneAlt(@NotNull ATNConfigSet configs) {
 		Map<ATNState, BitSet> x = getStateToAltMap(configs);
 		for (BitSet alts : x.values()) {
 			if ( alts.cardinality()==1 ) return true;
@@ -585,7 +599,7 @@ public enum PredictionMode {
 		return false;
 	}
 
-	public static int getSingleViableAlt(Collection<BitSet> altsets) {
+	public static int getSingleViableAlt(@NotNull Collection<BitSet> altsets) {
 		BitSet viableAlts = new BitSet();
 		for (BitSet alts : altsets) {
 			int minAlt = alts.nextSetBit(0);

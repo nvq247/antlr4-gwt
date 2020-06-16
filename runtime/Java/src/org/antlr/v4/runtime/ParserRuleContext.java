@@ -1,17 +1,43 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2012 Terence Parr
+ *  Copyright (c) 2012 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package org.antlr.v4.runtime;
 
 import org.antlr.v4.runtime.misc.Interval;
+import org.antlr.v4.runtime.misc.Nullable;
 import org.antlr.v4.runtime.tree.ErrorNode;
 import org.antlr.v4.runtime.tree.ErrorNodeImpl;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
+import org.antlr.v4.runtime.tree.pattern.RuleTagToken;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,8 +47,9 @@ import java.util.List;
  *
  *  Contains all of the information about the current rule not stored in the
  *  RuleContext. It handles parse tree children list, Any ATN state
- *  tracing, and the default values available for rule invocations:
- *  start, stop, rule index, current alt number.
+ *  tracing, and the default values available for rule indications:
+ *  start, stop, rule index, current alt number, current
+ *  ATN state.
  *
  *  Subclasses made for each rule and grammar track the parameters,
  *  return values, locals, and labels specific to that rule. These
@@ -63,8 +90,8 @@ public class ParserRuleContext extends RuleContext {
 	 *
 	 *  The parser setState() method updates field s and adds it to this list
 	 *  if we are debugging/tracing.
-	 *
-	 *  This does not trace states visited during prediction.
+     *
+     *  This does not trace states visited during prediction.
 	 */
 //	public List<Integer> states;
 
@@ -78,38 +105,17 @@ public class ParserRuleContext extends RuleContext {
 
 	public ParserRuleContext() { }
 
-	/** COPY a ctx (I'm deliberately not using copy constructor) to avoid
-	 *  confusion with creating node with parent. Does not copy children
-	 *  (except error leaves).
-	 *
-	 *  This is used in the generated parser code to flip a generic XContext
-	 *  node for rule X to a YContext for alt label Y. In that sense, it is
-	 *  not really a generic copy function.
-	 *
-	 *  If we do an error sync() at start of a rule, we might add error nodes
-	 *  to the generic XContext so this function must copy those nodes to
-	 *  the YContext as well else they are lost!
-	 */
+	/** COPY a ctx (I'm deliberately not using copy constructor) */
 	public void copyFrom(ParserRuleContext ctx) {
+		// from RuleContext
 		this.parent = ctx.parent;
 		this.invokingState = ctx.invokingState;
 
 		this.start = ctx.start;
 		this.stop = ctx.stop;
-
-		// copy any error nodes to alt label node
-		if ( ctx.children!=null ) {
-			this.children = new ArrayList<>();
-			// reset parent pointer for any error nodes
-			for (ParseTree child : ctx.children) {
-				if ( child instanceof ErrorNode ) {
-					addChild((ErrorNode)child);
-				}
-			}
-		}
 	}
 
-	public ParserRuleContext(ParserRuleContext parent, int invokingStateNumber) {
+	public ParserRuleContext(@Nullable ParserRuleContext parent, int invokingStateNumber) {
 		super(parent, invokingStateNumber);
 	}
 
@@ -118,66 +124,27 @@ public class ParserRuleContext extends RuleContext {
 	public void enterRule(ParseTreeListener listener) { }
 	public void exitRule(ParseTreeListener listener) { }
 
-	/** Add a parse tree node to this as a child.  Works for
-	 *  internal and leaf nodes. Does not set parent link;
-	 *  other add methods must do that. Other addChild methods
-	 *  call this.
-	 *
-	 *  We cannot set the parent pointer of the incoming node
-	 *  because the existing interfaces do not have a setParent()
-	 *  method and I don't want to break backward compatibility for this.
-	 *
-	 *  @since 4.7
-	 */
-	public <T extends ParseTree> T addAnyChild(T t) {
-		if ( children==null ) children = new ArrayList<>();
+	/** Does not set parent link; other add methods do that */
+	public TerminalNode addChild(TerminalNode t) {
+		if ( children==null ) children = new ArrayList<ParseTree>();
 		children.add(t);
 		return t;
 	}
 
 	public RuleContext addChild(RuleContext ruleInvocation) {
-		return addAnyChild(ruleInvocation);
+		if ( children==null ) children = new ArrayList<ParseTree>();
+		children.add(ruleInvocation);
+		return ruleInvocation;
 	}
 
-	/** Add a token leaf node child and force its parent to be this node. */
-	public TerminalNode addChild(TerminalNode t) {
-		t.setParent(this);
-		return addAnyChild(t);
-	}
-
-	/** Add an error node child and force its parent to be this node.
-	 *
-	 * @since 4.7
-	 */
-	public ErrorNode addErrorNode(ErrorNode errorNode) {
-		errorNode.setParent(this);
-		return addAnyChild(errorNode);
-	}
-
-	/** Add a child to this node based upon matchedToken. It
-	 *  creates a TerminalNodeImpl rather than using
-	 *  {@link Parser#createTerminalNode(ParserRuleContext, Token)}. I'm leaving this
-     *  in for compatibility but the parser doesn't use this anymore.
-	 */
-	@Deprecated
-	public TerminalNode addChild(Token matchedToken) {
-		TerminalNodeImpl t = new TerminalNodeImpl(matchedToken);
-		addAnyChild(t);
-		t.setParent(this);
-		return t;
-	}
-
-	/** Add a child to this node based upon badToken.  It
-	 *  creates a ErrorNodeImpl rather than using
-	 *  {@link Parser#createErrorNode(ParserRuleContext, Token)}. I'm leaving this
-	 *  in for compatibility but the parser doesn't use this anymore.
-	 */
-	@Deprecated
-	public ErrorNode addErrorNode(Token badToken) {
-		ErrorNodeImpl t = new ErrorNodeImpl(badToken);
-		addAnyChild(t);
-		t.setParent(this);
-		return t;
+	/** Used by enterOuterAlt to toss out a RuleContext previously added as
+	 *  we entered a rule. If we have # label, we will need to remove
+	 *  generic ruleContext object.
+ 	 */
+	public void removeLastChild() {
+		if ( children!=null ) {
+			children.remove(children.size()-1);
+		}
 	}
 
 //	public void trace(int s) {
@@ -185,14 +152,18 @@ public class ParserRuleContext extends RuleContext {
 //		states.add(s);
 //	}
 
-	/** Used by enterOuterAlt to toss out a RuleContext previously added as
-	 *  we entered a rule. If we have # label, we will need to remove
-	 *  generic ruleContext object.
-	 */
-	public void removeLastChild() {
-		if ( children!=null ) {
-			children.remove(children.size()-1);
-		}
+	public TerminalNode addChild(Token matchedToken) {
+		TerminalNodeImpl t = new TerminalNodeImpl(matchedToken);
+		addChild(t);
+		t.parent = this;
+		return t;
+	}
+
+	public ErrorNode addErrorNode(Token badToken) {
+		ErrorNodeImpl t = new ErrorNodeImpl(badToken);
+		addChild(t);
+		t.parent = this;
+		return t;
 	}
 
 	@Override
@@ -213,10 +184,12 @@ public class ParserRuleContext extends RuleContext {
 
 		int j = -1; // what element have we found with ctxType?
 		for (ParseTree o : children) {
-			if ( ctxType.isInstance(o) ) {
+			//if ( ctxType.isInstance(o) ) {
+			if ( isInstance(ctxType, o) ) {
 				j++;
 				if ( j == i ) {
-					return ctxType.cast(o);
+					//return ctxType.cast(o);
+					return (T)o;
 				}
 			}
 		}
@@ -282,12 +255,14 @@ public class ParserRuleContext extends RuleContext {
 
 		List<T> contexts = null;
 		for (ParseTree o : children) {
-			if ( ctxType.isInstance(o) ) {
+			//if ( ctxType.isInstance(o) ) {
+			if ( isInstance(ctxType, o) ) {
 				if ( contexts==null ) {
 					contexts = new ArrayList<T>();
 				}
 
-				contexts.add(ctxType.cast(o));
+				//contexts.add(ctxType.cast(o));
+				contexts.add((T)o);
 			}
 		}
 
@@ -303,36 +278,31 @@ public class ParserRuleContext extends RuleContext {
 
 	@Override
 	public Interval getSourceInterval() {
-		if ( start == null ) {
-			return Interval.INVALID;
-		}
-		if ( stop==null || stop.getTokenIndex()<start.getTokenIndex() ) {
-			return Interval.of(start.getTokenIndex(), start.getTokenIndex()-1); // empty
-		}
+		if ( start==null || stop==null ) return Interval.INVALID;
 		return Interval.of(start.getTokenIndex(), stop.getTokenIndex());
 	}
 
-	/**
-	 * Get the initial token in this context.
-	 * Note that the range from start to stop is inclusive, so for rules that do not consume anything
-	 * (for example, zero length or error productions) this token may exceed stop.
-	 */
 	public Token getStart() { return start; }
-	/**
-	 * Get the final token in this context.
-	 * Note that the range from start to stop is inclusive, so for rules that do not consume anything
-	 * (for example, zero length or error productions) this token may precede start.
-	 */
 	public Token getStop() { return stop; }
 
-	/** Used for rule context info debugging during parse-time, not so much for ATN debugging */
-	public String toInfoString(Parser recognizer) {
-		List<String> rules = recognizer.getRuleInvocationStack(this);
-		Collections.reverse(rules);
-		return "ParserRuleContext"+rules+"{" +
-			"start=" + start +
-			", stop=" + stop +
-			'}';
-	}
+    /** Used for rule context info debugging during parse-time, not so much for ATN debugging */
+    public String toInfoString(Parser recognizer) {
+        List<String> rules = recognizer.getRuleInvocationStack(this);
+        Collections.reverse(rules);
+        return "ParserRuleContext"+rules+"{" +
+                "start=" + start +
+                ", stop=" + stop +
+                '}';
+    }
+    
+    public static boolean isInstance(Class<?> clazz, Object o) {
+        if ((clazz==null) || (o==null)) return false;
+        if (clazz.isInterface()) throw new UnsupportedOperationException();
+        Class<?> oClazz = o.getClass();
+        while (oClazz!=null) {
+            if (oClazz.equals(clazz)) return true;
+            oClazz = oClazz.getSuperclass();
+        }
+        return false;
+    }
 }
-

@@ -1,20 +1,45 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2013 Terence Parr
+ *  Copyright (c) 2013 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package org.antlr.v4.runtime.atn;
 
-import org.antlr.v4.runtime.Token;
-import org.antlr.v4.runtime.misc.IntervalSet;
-import org.antlr.v4.runtime.misc.Pair;
-
 import java.io.InvalidClassException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
+
+import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.misc.IntervalSet;
+import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.misc.Nullable;
+import org.antlr.v4.runtime.misc.Pair;
 
 /**
  *
@@ -45,12 +70,6 @@ public class ATNDeserializer {
 	 */
 	private static final UUID ADDED_LEXER_ACTIONS;
 	/**
-	 * This UUID indicates the serialized ATN contains two sets of
-	 * IntervalSets, where the second set's values are encoded as
-	 * 32-bit integers to support the full Unicode SMP range up to U+10FFFF.
-	 */
-	private static final UUID ADDED_UNICODE_SMP;
-	/**
 	 * This list contains all of the currently supported UUIDs, ordered by when
 	 * the feature first appeared in this branch.
 	 */
@@ -67,67 +86,23 @@ public class ATNDeserializer {
 		BASE_SERIALIZED_UUID = UUID.fromString("33761B2D-78BB-4A43-8B0B-4F5BEE8AACF3");
 		ADDED_PRECEDENCE_TRANSITIONS = UUID.fromString("1DA0C57D-6C06-438A-9B27-10BCB3CE0F61");
 		ADDED_LEXER_ACTIONS = UUID.fromString("AADB8D7E-AEEF-4415-AD2B-8204D6CF042E");
-		ADDED_UNICODE_SMP = UUID.fromString("59627784-3BE5-417A-B9EB-8131A7286089");
 
 		SUPPORTED_UUIDS = new ArrayList<UUID>();
 		SUPPORTED_UUIDS.add(BASE_SERIALIZED_UUID);
 		SUPPORTED_UUIDS.add(ADDED_PRECEDENCE_TRANSITIONS);
 		SUPPORTED_UUIDS.add(ADDED_LEXER_ACTIONS);
-		SUPPORTED_UUIDS.add(ADDED_UNICODE_SMP);
 
-		SERIALIZED_UUID = ADDED_UNICODE_SMP;
+		SERIALIZED_UUID = ADDED_LEXER_ACTIONS;
 	}
 
-	interface UnicodeDeserializer {
-		// Wrapper for readInt() or readInt32()
-		int readUnicode(char[] data, int p);
-
-		// Work around Java not allowing mutation of captured variables
-		// by returning amount by which to increment p after each read
-		int size();
-	}
-
-	enum UnicodeDeserializingMode {
-		UNICODE_BMP,
-		UNICODE_SMP
-	}
-
-	static UnicodeDeserializer getUnicodeDeserializer(UnicodeDeserializingMode mode) {
-		if (mode == UnicodeDeserializingMode.UNICODE_BMP) {
-			return new UnicodeDeserializer() {
-				@Override
-				public int readUnicode(char[] data, int p) {
-					return toInt(data[p]);
-				}
-
-				@Override
-				public int size() {
-					return 1;
-				}
-			};
-		}
-		else {
-			return new UnicodeDeserializer() {
-				@Override
-				public int readUnicode(char[] data, int p) {
-					return toInt32(data, p);
-				}
-
-				@Override
-				public int size() {
-					return 2;
-				}
-			};
-		}
-	}
-
+	@NotNull
 	private final ATNDeserializationOptions deserializationOptions;
 
 	public ATNDeserializer() {
 		this(ATNDeserializationOptions.getDefaultOptions());
 	}
 
-	public ATNDeserializer(ATNDeserializationOptions deserializationOptions) {
+	public ATNDeserializer(@Nullable ATNDeserializationOptions deserializationOptions) {
 		if (deserializationOptions == null) {
 			deserializationOptions = ATNDeserializationOptions.getDefaultOptions();
 		}
@@ -148,7 +123,7 @@ public class ATNDeserializer {
 	 * serialized ATN at or after the feature identified by {@code feature} was
 	 * introduced; otherwise, {@code false}.
 	 */
-	static protected boolean isFeatureSupported(UUID feature, UUID actualUuid) {
+	protected boolean isFeatureSupported(UUID feature, UUID actualUuid) {
 		int featureIndex = SUPPORTED_UUIDS.indexOf(feature);
 		if (featureIndex < 0) {
 			return false;
@@ -158,24 +133,13 @@ public class ATNDeserializer {
 	}
 
 	@SuppressWarnings("deprecation")
-	public ATN deserialize(char[] data) {
-		data = data.clone();
-
-		// Each char value in data is shifted by +2 at the entry to this method.
-		// This is an encoding optimization targeting the serialized values 0
-		// and -1 (serialized to 0xFFFF), each of which are very common in the
-		// serialized form of the ATN. In the modified UTF-8 that Java uses for
-		// compiled string literals, these two character values have multi-byte
-		// forms. By shifting each value by +2, they become characters 2 and 1
-		// prior to writing the string, each of which have single-byte
-		// representations. Since the shift occurs in the tool during ATN
-		// serialization, each target is responsible for adjusting the values
-		// during deserialization.
-		//
-		// As a special case, note that the first element of data is not
-		// adjusted because it contains the major version number of the
-		// serialized ATN, which was fixed at 3 at the time the value shifting
-		// was implemented.
+	public ATN deserialize(@NotNull char[] data) {
+		//data = data.clone();
+		
+		//data = TabCloner.clone(data);
+		System.arraycopy(data, 0, data, 0, data.length);
+		
+		// don't adjust the first value since that's the version number
 		for (int i = 1; i < data.length; i++) {
 			data[i] = (char)(data[i] - 2);
 		}
@@ -183,14 +147,14 @@ public class ATNDeserializer {
 		int p = 0;
 		int version = toInt(data[p++]);
 		if (version != SERIALIZED_VERSION) {
-			String reason = String.format(Locale.getDefault(), "Could not deserialize ATN with version %d (expected %d).", version, SERIALIZED_VERSION);
+			String reason = "Could not deserialize ATN with version " + version + " (expected " + SERIALIZED_VERSION + ").";
 			throw new UnsupportedOperationException(new InvalidClassException(ATN.class.getName(), reason));
 		}
 
 		UUID uuid = toUUID(data, p);
 		p += 8;
 		if (!SUPPORTED_UUIDS.contains(uuid)) {
-			String reason = String.format(Locale.getDefault(), "Could not deserialize ATN with UUID %s (expected %s or a legacy UUID).", uuid, SERIALIZED_UUID);
+			String reason = "Could not deserialize ATN with UUID " + uuid + " (expected " + SERIALIZED_UUID + " or a legacy UUID).";
 			throw new UnsupportedOperationException(new InvalidClassException(ATN.class.getName(), reason));
 		}
 
@@ -251,7 +215,7 @@ public class ATNDeserializer {
 			int numPrecedenceStates = toInt(data[p++]);
 			for (int i = 0; i < numPrecedenceStates; i++) {
 				int stateNumber = toInt(data[p++]);
-				((RuleStartState)atn.states.get(stateNumber)).isLeftRecursiveRule = true;
+				((RuleStartState)atn.states.get(stateNumber)).isPrecedenceRule = true;
 			}
 		}
 
@@ -280,6 +244,9 @@ public class ATNDeserializer {
 					// this piece of unused metadata was serialized prior to the
 					// addition of LexerAction
 					int actionIndexIgnored = toInt(data[p++]);
+					if (actionIndexIgnored == 0xFFFF) {
+						actionIndexIgnored = -1;
+					}
 				}
 			}
 		}
@@ -308,14 +275,22 @@ public class ATNDeserializer {
 		// SETS
 		//
 		List<IntervalSet> sets = new ArrayList<IntervalSet>();
+		int nsets = toInt(data[p++]);
+		for (int i=0; i<nsets; i++) {
+			int nintervals = toInt(data[p]);
+			p++;
+			IntervalSet set = new IntervalSet();
+			sets.add(set);
 
-		// First, read all sets with 16-bit Unicode code points <= U+FFFF.
-		p = deserializeSets(data, p, sets, getUnicodeDeserializer(UnicodeDeserializingMode.UNICODE_BMP));
+			boolean containsEof = toInt(data[p++]) != 0;
+			if (containsEof) {
+				set.add(-1);
+			}
 
-		// Next, if the ATN was serialized with the Unicode SMP feature,
-		// deserialize sets with 32-bit arguments <= U+10FFFF.
-		if (isFeatureSupported(ADDED_UNICODE_SMP, uuid)) {
-			p = deserializeSets(data, p, sets, getUnicodeDeserializer(UnicodeDeserializingMode.UNICODE_SMP));
+			for (int j=0; j<nintervals; j++) {
+				set.add(toInt(data[p]), toInt(data[p + 1]));
+				p += 2;
+			}
 		}
 
 		//
@@ -349,7 +324,7 @@ public class ATNDeserializer {
 
 				RuleTransition ruleTransition = (RuleTransition)t;
 				int outermostPrecedenceReturn = -1;
-				if (atn.ruleToStartState[ruleTransition.target.ruleIndex].isLeftRecursiveRule) {
+				if (atn.ruleToStartState[ruleTransition.target.ruleIndex].isPrecedenceRule) {
 					if (ruleTransition.precedence == 0) {
 						outermostPrecedenceReturn = ruleTransition.target.ruleIndex;
 					}
@@ -481,7 +456,7 @@ public class ATNDeserializer {
 
 				ATNState endState;
 				Transition excludeTransition = null;
-				if (atn.ruleToStartState[i].isLeftRecursiveRule) {
+				if (atn.ruleToStartState[i].isPrecedenceRule) {
 					// wrap from the beginning of the rule to the StarLoopEntryState
 					endState = null;
 					for (ATNState state : atn.states) {
@@ -552,38 +527,14 @@ public class ATNDeserializer {
 		return atn;
 	}
 
-	private int deserializeSets(char[] data, int p, List<IntervalSet> sets, UnicodeDeserializer unicodeDeserializer) {
-		int nsets = toInt(data[p++]);
-		for (int i=0; i<nsets; i++) {
-			int nintervals = toInt(data[p]);
-			p++;
-			IntervalSet set = new IntervalSet();
-			sets.add(set);
-
-			boolean containsEof = toInt(data[p++]) != 0;
-			if (containsEof) {
-				set.add(-1);
-			}
-
-			for (int j=0; j<nintervals; j++) {
-				int a = unicodeDeserializer.readUnicode(data, p);
-				p += unicodeDeserializer.size();
-				int b = unicodeDeserializer.readUnicode(data, p);
-				p += unicodeDeserializer.size();
-				set.add(a, b);
-			}
-		}
-		return p;
-	}
-
 	/**
 	 * Analyze the {@link StarLoopEntryState} states in the specified ATN to set
-	 * the {@link StarLoopEntryState#isPrecedenceDecision} field to the
+	 * the {@link StarLoopEntryState#precedenceRuleDecision} field to the
 	 * correct value.
 	 *
 	 * @param atn The ATN.
 	 */
-	protected void markPrecedenceDecisions(ATN atn) {
+	protected void markPrecedenceDecisions(@NotNull ATN atn) {
 		for (ATNState state : atn.states) {
 			if (!(state instanceof StarLoopEntryState)) {
 				continue;
@@ -593,11 +544,11 @@ public class ATNDeserializer {
 			 * decision for the closure block that determines whether a
 			 * precedence rule should continue or complete.
 			 */
-			if (atn.ruleToStartState[state.ruleIndex].isLeftRecursiveRule) {
+			if (atn.ruleToStartState[state.ruleIndex].isPrecedenceRule) {
 				ATNState maybeLoopEndState = state.transition(state.getNumberOfTransitions() - 1).target;
 				if (maybeLoopEndState instanceof LoopEndState) {
 					if (maybeLoopEndState.epsilonOnlyTransitions && maybeLoopEndState.transition(0).target instanceof RuleStopState) {
-						((StarLoopEntryState)state).isPrecedenceDecision = true;
+						((StarLoopEntryState)state).precedenceRuleDecision = true;
 					}
 				}
 			}
@@ -695,8 +646,8 @@ public class ATNDeserializer {
 		return new UUID(mostSigBits, leastSigBits);
 	}
 
-
-	protected Transition edgeFactory(ATN atn,
+	@NotNull
+	protected Transition edgeFactory(@NotNull ATN atn,
 										 int type, int src, int trg,
 										 int arg1, int arg2, int arg3,
 										 List<IntervalSet> sets)
@@ -754,7 +705,7 @@ public class ATNDeserializer {
 			case ATNState.PLUS_LOOP_BACK : s = new PlusLoopbackState(); break;
 			case ATNState.LOOP_END : s = new LoopEndState(); break;
 			default :
-				String message = String.format(Locale.getDefault(), "The specified state type %d is not valid.", type);
+				String message = "The specified state type " + type + " is not valid.";
 				throw new IllegalArgumentException(message);
 		}
 
@@ -789,7 +740,7 @@ public class ATNDeserializer {
 			return new LexerTypeAction(data1);
 
 		default:
-			String message = String.format(Locale.getDefault(), "The specified lexer action type %d is not valid.", type);
+			String message = "The specified lexer action type " + type + " is not valid.";
 			throw new IllegalArgumentException(message);
 		}
 	}

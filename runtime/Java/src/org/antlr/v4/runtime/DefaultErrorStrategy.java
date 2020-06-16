@@ -1,7 +1,31 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2012 Terence Parr
+ *  Copyright (c) 2012 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package org.antlr.v4.runtime;
@@ -10,6 +34,8 @@ import org.antlr.v4.runtime.atn.ATN;
 import org.antlr.v4.runtime.atn.ATNState;
 import org.antlr.v4.runtime.atn.RuleTransition;
 import org.antlr.v4.runtime.misc.IntervalSet;
+import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.misc.Nullable;
 import org.antlr.v4.runtime.misc.Pair;
 
 /**
@@ -37,21 +63,6 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	protected IntervalSet lastErrorStates;
 
 	/**
-	 * This field is used to propagate information about the lookahead following
-	 * the previous match. Since prediction prefers completing the current rule
-	 * to error recovery efforts, error reporting may occur later than the
-	 * original point where it was discoverable. The original context is used to
-	 * compute the true expected sets as though the reporting occurred as early
-	 * as possible.
-	 */
-	protected ParserRuleContext nextTokensContext;
-
-	/**
-	 * @see #nextTokensContext
-	 */
-	protected int nextTokensState;
-
-	/**
 	 * {@inheritDoc}
 	 *
 	 * <p>The default implementation simply calls {@link #endErrorCondition} to
@@ -68,7 +79,7 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 *
 	 * @param recognizer the parser instance
 	 */
-	protected void beginErrorCondition(Parser recognizer) {
+	protected void beginErrorCondition(@NotNull Parser recognizer) {
 		errorRecoveryMode = true;
 	}
 
@@ -86,7 +97,7 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 *
 	 * @param recognizer
 	 */
-	protected void endErrorCondition(Parser recognizer) {
+	protected void endErrorCondition(@NotNull Parser recognizer) {
 		errorRecoveryMode = false;
 		lastErrorStates = null;
 		lastErrorIndex = -1;
@@ -239,21 +250,10 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
         int la = tokens.LA(1);
 
         // try cheaper subset first; might get lucky. seems to shave a wee bit off
-		IntervalSet nextTokens = recognizer.getATN().nextTokens(s);
-		if (nextTokens.contains(la)) {
-			// We are sure the token matches
-			nextTokensContext = null;
-			nextTokensState = ATNState.INVALID_STATE_NUMBER;
-			return;
-		}
+        if ( recognizer.getATN().nextTokens(s).contains(la) || la==Token.EOF ) return;
 
-		if (nextTokens.contains(Token.EPSILON)) {
-			if (nextTokensContext == null) {
-				// It's possible the next token won't match; information tracked
-				// by sync is restricted for performance.
-				nextTokensContext = recognizer.getContext();
-				nextTokensState = recognizer.getState();
-			}
+		// Return but don't end recovery. only do that upon valid token match
+		if (recognizer.isExpectedToken(la)) {
 			return;
 		}
 
@@ -294,8 +294,8 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 * @param recognizer the parser instance
 	 * @param e the recognition exception
 	 */
-	protected void reportNoViableAlternative(Parser recognizer,
-											 NoViableAltException e)
+	protected void reportNoViableAlternative(@NotNull Parser recognizer,
+											 @NotNull NoViableAltException e)
 	{
 		TokenStream tokens = recognizer.getInputStream();
 		String input;
@@ -319,8 +319,8 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 * @param recognizer the parser instance
 	 * @param e the recognition exception
 	 */
-	protected void reportInputMismatch(Parser recognizer,
-									   InputMismatchException e)
+	protected void reportInputMismatch(@NotNull Parser recognizer,
+									   @NotNull InputMismatchException e)
 	{
 		String msg = "mismatched input "+getTokenErrorDisplay(e.getOffendingToken())+
 		" expecting "+e.getExpectedTokens().toString(recognizer.getVocabulary());
@@ -336,8 +336,8 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 * @param recognizer the parser instance
 	 * @param e the recognition exception
 	 */
-	protected void reportFailedPredicate(Parser recognizer,
-										 FailedPredicateException e)
+	protected void reportFailedPredicate(@NotNull Parser recognizer,
+										 @NotNull FailedPredicateException e)
 	{
 		String ruleName = recognizer.getRuleNames()[recognizer._ctx.getRuleIndex()];
 		String msg = "rule "+ruleName+" "+e.getMessage();
@@ -362,7 +362,7 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 *
 	 * @param recognizer the parser instance
 	 */
-	protected void reportUnwantedToken(Parser recognizer) {
+	protected void reportUnwantedToken(@NotNull Parser recognizer) {
 		if (inErrorRecoveryMode(recognizer)) {
 			return;
 		}
@@ -394,7 +394,7 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 *
 	 * @param recognizer the parser instance
 	 */
-	protected void reportMissingToken(Parser recognizer) {
+	protected void reportMissingToken(@NotNull Parser recognizer) {
 		if (inErrorRecoveryMode(recognizer)) {
 			return;
 		}
@@ -478,14 +478,7 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 		}
 
 		// even that didn't work; must throw the exception
-		InputMismatchException e;
-		if (nextTokensContext == null) {
-			e = new InputMismatchException(recognizer);
-		} else {
-			e = new InputMismatchException(recognizer, nextTokensState, nextTokensContext);
-		}
-
-		throw e;
+		throw new InputMismatchException(recognizer);
 	}
 
 	/**
@@ -505,7 +498,7 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 * @return {@code true} if single-token insertion is a viable recovery
 	 * strategy for the current mismatched input, otherwise {@code false}
 	 */
-	protected boolean singleTokenInsertion(Parser recognizer) {
+	protected boolean singleTokenInsertion(@NotNull Parser recognizer) {
 		int currentSymbolType = recognizer.getInputStream().LA(1);
 		// if current token is consistent with what could come after current
 		// ATN state, then we know we're missing a token; error recovery
@@ -541,7 +534,8 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 * deletion successfully recovers from the mismatched input, otherwise
 	 * {@code null}
 	 */
-	protected Token singleTokenDeletion(Parser recognizer) {
+	@Nullable
+	protected Token singleTokenDeletion(@NotNull Parser recognizer) {
 		int nextTokenType = recognizer.getInputStream().LA(2);
 		IntervalSet expecting = getExpectedTokens(recognizer);
 		if ( expecting.contains(nextTokenType) ) {
@@ -580,13 +574,11 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 *  If you change what tokens must be created by the lexer,
 	 *  override this method to create the appropriate tokens.
 	 */
-	protected Token getMissingSymbol(Parser recognizer) {
+	@NotNull
+	protected Token getMissingSymbol(@NotNull Parser recognizer) {
 		Token currentSymbol = recognizer.getCurrentToken();
 		IntervalSet expecting = getExpectedTokens(recognizer);
-		int expectedTokenType = Token.INVALID_TYPE;
-		if ( !expecting.isNil() ) {
-			expectedTokenType = expecting.getMinElement(); // get any element
-		}
+		int expectedTokenType = expecting.getMinElement(); // get any element
 		String tokenText;
 		if ( expectedTokenType== Token.EOF ) tokenText = "<missing EOF>";
 		else tokenText = "<missing "+recognizer.getVocabulary().getDisplayName(expectedTokenType)+">";
@@ -602,8 +594,8 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 							current.getLine(), current.getCharPositionInLine());
 	}
 
-
-	protected IntervalSet getExpectedTokens(Parser recognizer) {
+	@NotNull
+	protected IntervalSet getExpectedTokens(@NotNull Parser recognizer) {
 		return recognizer.getExpectedTokens();
 	}
 
@@ -629,16 +621,16 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 		return escapeWSAndQuote(s);
 	}
 
-	protected String getSymbolText(Token symbol) {
+	protected String getSymbolText(@NotNull Token symbol) {
 		return symbol.getText();
 	}
 
-	protected int getSymbolType(Token symbol) {
+	protected int getSymbolType(@NotNull Token symbol) {
 		return symbol.getType();
 	}
 
-
-	protected String escapeWSAndQuote(String s) {
+	@NotNull
+	protected String escapeWSAndQuote(@NotNull String s) {
 //		if ( s==null ) return s;
 		s = s.replace("\n","\\n");
 		s = s.replace("\r","\\r");
@@ -738,7 +730,8 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	 *  Like Grosch I implement context-sensitive FOLLOW sets that are combined
 	 *  at run-time upon error to avoid overhead during parsing.
 	 */
-	protected IntervalSet getErrorRecoverySet(Parser recognizer) {
+	@NotNull
+	protected IntervalSet getErrorRecoverySet(@NotNull Parser recognizer) {
 		ATN atn = recognizer.getInterpreter().atn;
 		RuleContext ctx = recognizer._ctx;
 		IntervalSet recoverSet = new IntervalSet();
@@ -756,7 +749,7 @@ public class DefaultErrorStrategy implements ANTLRErrorStrategy {
 	}
 
 	/** Consume tokens until one matches the given token set. */
-	protected void consumeUntil(Parser recognizer, IntervalSet set) {
+	protected void consumeUntil(@NotNull Parser recognizer, @NotNull IntervalSet set) {
 //		System.err.println("consumeUntil("+set.toString(recognizer.getTokenNames())+")");
 		int ttype = recognizer.getInputStream().LA(1);
 		while (ttype != Token.EOF && !set.contains(ttype) ) {

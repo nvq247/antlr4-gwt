@@ -1,22 +1,11 @@
-<!--
-  ~ Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
-  ~ Use of this file is governed by the BSD 3-clause license that
-  ~ can be found in the LICENSE.txt file in the project root.
-  -->
-
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<parent>
-		<groupId>org.sonatype.oss</groupId>
-		<artifactId>oss-parent</artifactId>
-		<version>9</version>
-	</parent>
 	<groupId>org.antlr</groupId>
-	<artifactId>antlr4-master</artifactId>
-	<version>4.8-2-SNAPSHOT</version>
+	<artifactId>antlr4gwt-master</artifactId>
+	<version>4.4.8</version>
 	<packaging>pom</packaging>
 
-	<name>ANTLR 4</name>
+	<name>ANTLR 4 GWT</name>
 	<description>ANTLR 4 Master Build POM</description>
 	<url>http://www.antlr.org</url>
 	<inceptionYear>1992</inceptionYear>
@@ -34,13 +23,15 @@
 	</licenses>
 
 	<developers>
+
 		<developer>
 			<name>Terence Parr</name>
-			<url>http://parrt.cs.usfca.edu</url>
+			<url>http://antlr.org/wiki/display/~admin/Home</url>
 			<roles>
 				<role>Project lead - ANTLR</role>
 			</roles>
 		</developer>
+
 		<developer>
 			<name>Sam Harwell</name>
 			<url>http://tunnelvisionlabs.com</url>
@@ -48,18 +39,7 @@
 				<role>Developer</role>
 			</roles>
 		</developer>
-		<developer>
-			<name>Eric Vergnaud</name>
-			<roles>
-				<role>Developer - JavaScript, C#, Python 2, Python 3</role>
-			</roles>
-		</developer>
-		<developer>
-			<name>Peter Boyer</name>
-			<roles>
-				<role>Developer - Go</role>
-			</roles>
-		</developer>
+
 		<developer>
 			<name>Jim Idle</name>
 			<email>jimi@idle.ws</email>
@@ -68,36 +48,34 @@
 				<role>Developer - Maven Plugin</role>
 			</roles>
 		</developer>
-		<developer>
-			<name>Mike Lischke</name>
-			<roles>
-				<role>Developer - C++ Target</role>
-			</roles>
-		</developer>
-		<developer>
-			<name>Tom Everett</name>
-			<roles>
-				<role>Developer</role>
-			</roles>
-		</developer>
+
 	</developers>
 
 	<modules>
 		<module>runtime/Java</module>
-		<module>tool</module>
-		<module>antlr4-maven-plugin</module>
-		<module>tool-testsuite</module>
-		<module>runtime-testsuite/annotations</module>
-		<module>runtime-testsuite/processors</module>
-		<module>runtime-testsuite</module>
+		<module>runtime/JavaAnnotations</module>
+		<!-- <module>tool</module> -->
+		<!-- <module>antlr4-maven-plugin</module> -->
 	</modules>
 
 	<properties>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<!--
+		<java5.home>${env.JAVA5_HOME}</java5.home>
+		<java6.home>${env.JAVA6_HOME}</java6.home>
+		<java7.home>${env.JAVA6_HOME}</java7.home>
+		<bootclasspath.java5>${java5.home}/lib/rt.jar</bootclasspath.java5>
+		<bootclasspath.java6>${java6.home}/lib/rt.jar</bootclasspath.java6>
+		<bootclasspath.java7>${java7.home}/lib/rt.jar</bootclasspath.java7>
+		<bootclasspath.compile>${bootclasspath.java7}</bootclasspath.compile>
+		<bootclasspath.testCompile>${bootclasspath.java7}</bootclasspath.testCompile>
+		-->
 		<antlr.testinprocess>true</antlr.testinprocess>
-		<maven.compiler.source>1.7</maven.compiler.source>
-		<maven.compiler.target>1.7</maven.compiler.target>
+		<gwt.version>2.8.2</gwt.version>
+		<github.global.server>github</github.global.server>
 	</properties>
 
 	<mailingLists>
@@ -119,49 +97,181 @@
 		<tag>HEAD</tag>
 	</scm>
 
+	<profiles>
+		<profile>
+			<id>sonatype-oss-release</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-compiler-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>default-compile</id>
+								<configuration>
+									<compilerArgs>
+										<arg>-Xlint</arg>
+										<arg>-Xlint:-serial</arg>
+										<arg>-bootclasspath</arg>
+										<arg>${bootclasspath.compile}</arg>
+									</compilerArgs>
+								</configuration>
+							</execution>
+							<execution>
+								<id>default-testCompile</id>
+								<configuration>
+									<compilerArgs>
+										<arg>-Xlint</arg>
+										<arg>-Xlint:-serial</arg>
+										<arg>-bootclasspath</arg>
+										<arg>${bootclasspath.testCompile}</arg>
+									</compilerArgs>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+	
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.google.gwt</groupId>
+				<artifactId>gwt</artifactId>
+				<version>${gwt.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.google.gwt</groupId>
+			<artifactId>gwt-user</artifactId>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+
 	<build>
 		<resources>
 			<resource>
-				<directory>resources</directory>
+				<directory>src</directory>
+				<includes>
+					<include>**/*.gwt.xml</include>
+					<include>**/*.java</include>
+				</includes>
 			</resource>
 		</resources>
-		<testResources>
-			<testResource>
-				<directory>test</directory>
-			</testResource>
-		</testResources>
 		<plugins>
 			<plugin>
-				<artifactId>maven-clean-plugin</artifactId>
-				<version>3.0.0</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
 				<configuration>
-					<filesets>
-						<fileset>
-							<directory>runtime/Swift/.build</directory>
-						</fileset>
-						<fileset>
-							<directory>runtime/Swift/Tests/Antlr4Tests/gen</directory>
-						</fileset>
-					</filesets>
+					<showWarnings>true</showWarnings>
+					<showDeprecation>true</showDeprecation>
+					<source>1.8</source>
+					<target>1.8</target>
+					<compilerArgs>
+						<arg>-Xlint</arg>
+						<arg>-Xlint:-serial</arg>
+					</compilerArgs>
 				</configuration>
 			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>2.4</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.16</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<!-- override the version inherited from the parent -->
+				<version>2.2.1</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<!-- override the version inherited from the parent -->
+				<version>2.9.1</version>
+				<configuration>
+					<quiet>true</quiet>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<!-- override the version inherited from the parent -->
+				<version>1.4</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<!-- override the version inherited from the parent -->
+				<version>2.4.2</version>
+				<configuration>
+					<arguments>-Psonatype-oss-release ${release.arguments}</arguments>
+				</configuration>
+			</plugin>
+
+			<plugin>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <version>2.8.2</version>
+        <configuration>
+          <altDeploymentRepository>internal.repo::default::file://${user.dir}/target/mvn-repo</altDeploymentRepository>
+        </configuration>
+    	</plugin>
+			<plugin>
+            <groupId>com.github.github</groupId>
+            <artifactId>site-maven-plugin</artifactId>
+            <version>0.12</version>
+            <configuration>
+                <message>Maven artifacts for ${project.artifactId} ${project.version}</message>
+                <noJekyll>true</noJekyll>
+                <outputDirectory>${user.dir}/target/mvn-repo</outputDirectory>
+                <branch>refs/heads/mvn-repo</branch>
+                <includes><include>**/*</include></includes>
+                <repositoryName>antlr4-gwt</repositoryName>
+                <repositoryOwner>aranega</repositoryOwner>
+            </configuration>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>site</goal>
+                </goals>
+                <phase>deploy</phase>
+              </execution>
+            </executions>
+        </plugin>
 		</plugins>
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.6.0</version>
-					<configuration>
-						<source>${maven.compiler.source}</source>
-						<target>${maven.compiler.target}</target>
-					</configuration>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-javadoc-plugin</artifactId>
-				</plugin>
-			</plugins>
-		</pluginManagement>
 	</build>
+
+	<distributionManagement>
+    <repository>
+        <id>internal.repo</id>
+        <name>Temporary Staging Repository</name>
+        <url>file://${user.dir}/target/mvn-​repo</url>
+    </repository>
+</distributionManagement>
 </project>

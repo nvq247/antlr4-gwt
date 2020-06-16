@@ -1,10 +1,36 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2012 Terence Parr
+ *  Copyright (c) 2012 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package org.antlr.v4.runtime.tree;
+
+import org.antlr.v4.runtime.misc.NotNull;
 
 /**
  * This interface defines the basic notion of a parse tree visitor. Generated
@@ -22,7 +48,7 @@ public interface ParseTreeVisitor<T> {
 	 * @param tree The {@link ParseTree} to visit.
 	 * @return The result of visiting the parse tree.
 	 */
-	T visit(ParseTree tree);
+	T visit(@NotNull ParseTree tree);
 
 	/**
 	 * Visit the children of a node, and return a user-defined result of the
@@ -31,7 +57,7 @@ public interface ParseTreeVisitor<T> {
 	 * @param node The {@link RuleNode} whose children should be visited.
 	 * @return The result of visiting the children of the node.
 	 */
-	T visitChildren(RuleNode node);
+	T visitChildren(@NotNull RuleNode node);
 
 	/**
 	 * Visit a terminal node, and return a user-defined result of the operation.
@@ -39,7 +65,7 @@ public interface ParseTreeVisitor<T> {
 	 * @param node The {@link TerminalNode} to visit.
 	 * @return The result of visiting the node.
 	 */
-	T visitTerminal(TerminalNode node);
+	T visitTerminal(@NotNull TerminalNode node);
 
 	/**
 	 * Visit an error node, and return a user-defined result of the operation.
@@ -47,6 +73,6 @@ public interface ParseTreeVisitor<T> {
 	 * @param node The {@link ErrorNode} to visit.
 	 * @return The result of visiting the node.
 	 */
-	T visitErrorNode(ErrorNode node);
+	T visitErrorNode(@NotNull ErrorNode node);
 
 }

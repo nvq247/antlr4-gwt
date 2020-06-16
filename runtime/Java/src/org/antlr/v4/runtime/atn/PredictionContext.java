@@ -1,15 +1,34 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2012 Terence Parr
+ *  Copyright (c) 2012 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package org.antlr.v4.runtime.atn;
-
-import org.antlr.v4.runtime.Recognizer;
-import org.antlr.v4.runtime.RuleContext;
-import org.antlr.v4.runtime.misc.DoubleKeyMap;
-import org.antlr.v4.runtime.misc.MurmurHash;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,6 +38,13 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.antlr.v4.runtime.Recognizer;
+import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.misc.DoubleKeyMap;
+import org.antlr.v4.runtime.misc.MurmurHash;
+import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.misc.Nullable;
 
 public abstract class PredictionContext {
 	/**
@@ -69,7 +95,7 @@ public abstract class PredictionContext {
 	/** Convert a {@link RuleContext} tree to a {@link PredictionContext} graph.
 	 *  Return {@link #EMPTY} if {@code outerContext} is empty or null.
 	 */
-	public static PredictionContext fromRuleContext(ATN atn, RuleContext outerContext) {
+	public static PredictionContext fromRuleContext(@NotNull ATN atn, RuleContext outerContext) {
 		if ( outerContext==null ) outerContext = RuleContext.EMPTY;
 
 		// if we are in RuleContext of start rule, s, then PredictionContext
@@ -93,13 +119,12 @@ public abstract class PredictionContext {
 
 	public abstract int getReturnState(int index);
 
-	/** This means only the {@link #EMPTY} (wildcard? not sure) context is in set. */
+	/** This means only the {@link #EMPTY} context is in set. */
 	public boolean isEmpty() {
 		return this == EMPTY;
 	}
 
 	public boolean hasEmptyPath() {
-		// since EMPTY_RETURN_STATE can only appear in the last position, we check last one
 		return getReturnState(size() - 1) == EMPTY_RETURN_STATE;
 	}
 
@@ -316,14 +341,14 @@ public abstract class PredictionContext {
 		}
 		else {
 			if ( a == EMPTY && b == EMPTY ) return EMPTY; // $ + $ = $
-			if ( a == EMPTY ) { // $ + x = [x,$]
+			if ( a == EMPTY ) { // $ + x = [$,x]
 				int[] payloads = {b.returnState, EMPTY_RETURN_STATE};
 				PredictionContext[] parents = {b.parent, null};
 				PredictionContext joined =
 					new ArrayPredictionContext(parents, payloads);
 				return joined;
 			}
-			if ( b == EMPTY ) { // x + $ = [x,$] ($ is always last if present)
+			if ( b == EMPTY ) { // x + $ = [$,x] ($ is always first if present)
 				int[] payloads = {a.returnState, EMPTY_RETURN_STATE};
 				PredictionContext[] parents = {a.parent, null};
 				PredictionContext joined =
@@ -540,9 +565,9 @@ public abstract class PredictionContext {
 
 	// From Sam
 	public static PredictionContext getCachedContext(
-		PredictionContext context,
-		PredictionContextCache contextCache,
-		IdentityHashMap<PredictionContext, PredictionContext> visited)
+		@NotNull PredictionContext context,
+		@NotNull PredictionContextCache contextCache,
+		@NotNull IdentityHashMap<PredictionContext, PredictionContext> visited)
 	{
 		if (context.isEmpty()) {
 			return context;
@@ -645,7 +670,7 @@ public abstract class PredictionContext {
 		}
 	}
 
-	public String toString(Recognizer<?,?> recog) {
+	public String toString(@Nullable Recognizer<?,?> recog) {
 		return toString();
 //		return toString(recog, ParserRuleContext.EMPTY);
 	}

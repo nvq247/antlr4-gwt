@@ -1,9 +1,36 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2014 Terence Parr
+ *  Copyright (c) 2014 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package org.antlr.v4.runtime;
+
+import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.misc.Nullable;
 
 /**
  * This interface provides information about the vocabulary used by a
@@ -13,12 +40,6 @@ package org.antlr.v4.runtime;
  * @author Sam Harwell
  */
 public interface Vocabulary {
-	/**
-	 * Returns the highest token type value. It can be used to iterate from
-	 * zero to that number, inclusively, thus querying all stored entries.
-	 * @return the highest token type value
-	 */
-	int getMaxTokenType();
 
 	/**
 	 * Gets the string literal associated with a token type. The string returned
@@ -56,6 +77,7 @@ public interface Vocabulary {
 	 * @return The string literal associated with the specified token type, or
 	 * {@code null} if no string literal is associated with the type.
 	 */
+	@Nullable
 	String getLiteralName(int tokenType);
 
 	/**
@@ -68,7 +90,7 @@ public interface Vocabulary {
 	 *
 	 * <ul>
 	 *  <li>Tokens created by lexer rules.</li>
-	 *  <li>Tokens defined in a <code>tokens{}</code> block in a lexer or parser
+	 *  <li>Tokens defined in a {@code tokens{}} block in a lexer or parser
 	 *  grammar.</li>
 	 *  <li>The implicitly defined {@code EOF} token, which has the token type
 	 *  {@link Token#EOF}.</li>
@@ -101,6 +123,7 @@ public interface Vocabulary {
 	 * @return The symbolic name associated with the specified token type, or
 	 * {@code null} if no symbolic name is associated with the type.
 	 */
+	@Nullable
 	String getSymbolicName(int tokenType);
 
 	/**
@@ -123,5 +146,7 @@ public interface Vocabulary {
 	 * @return The display name of the token type, for use in error reporting or
 	 * other user-visible messages which reference specific token types.
 	 */
+	@NotNull
 	String getDisplayName(int tokenType);
+
 }

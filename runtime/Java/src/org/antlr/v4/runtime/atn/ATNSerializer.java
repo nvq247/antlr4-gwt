@@ -1,7 +1,31 @@
 /*
- * Copyright (c) 2012-2017 The ANTLR Project. All rights reserved.
- * Use of this file is governed by the BSD 3-clause license that
- * can be found in the LICENSE.txt file in the project root.
+ * [The "BSD license"]
+ *  Copyright (c) 2012 Terence Parr
+ *  Copyright (c) 2012 Sam Harwell
+ *  All rights reserved.
+ *
+ *  Redistribution and use in source and binary forms, with or without
+ *  modification, are permitted provided that the following conditions
+ *  are met:
+ *
+ *  1. Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ *  2. Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *  3. The name of the author may not be used to endorse or promote products
+ *     derived from this software without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ *  IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ *  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ *  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 package org.antlr.v4.runtime.atn;
@@ -12,23 +36,20 @@ import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.misc.IntervalSet;
 import org.antlr.v4.runtime.misc.Utils;
 
+import com.google.gwt.core.shared.GwtIncompatible;
+
 import java.io.InvalidClassException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+@GwtIncompatible("Should check")
 public class ATNSerializer {
 	public ATN atn;
 	private List<String> tokenNames;
-
-	private interface CodePointSerializer {
-		void serializeCodePoint(IntegerList data, int cp);
-	}
 
 	public ATNSerializer(ATN atn) {
 		assert atn.grammarType != null;
@@ -53,11 +74,9 @@ public class ATNSerializer {
 	 *  	(args are token type,actionIndex in lexer else 0,0)
 	 *      num modes,
 	 *      mode-0-start-state, mode-1-start-state, ... (parser has 0 modes)
-	 *      num unicode-bmp-sets
-	 *      bmp-set-0-interval-count intervals, bmp-set-1-interval-count intervals, ...
-	 *      num unicode-smp-sets
-	 *      smp-set-0-interval-count intervals, smp-set-1-interval-count intervals, ...
-	 *	num total edges,
+	 *      num sets
+	 *      set-0-interval-count intervals, set-1-interval-count intervals, ...
+	 *  	num total edges,
 	 *      src, trg, edge-type, edge arg1, optional edge arg2 (present always), ...
 	 *      num decisions,
 	 *      decision-0-start-state, decision-1-start-state, ...
@@ -74,10 +93,8 @@ public class ATNSerializer {
 		data.add(atn.maxTokenType);
 		int nedges = 0;
 
-		// Note that we use a LinkedHashMap as a set to
-		// maintain insertion order while deduplicating
-		// entries with the same key.
-		Map<IntervalSet, Boolean> sets = new LinkedHashMap<>();
+		Map<IntervalSet, Integer> setIndices = new HashMap<IntervalSet, Integer>();
+		List<IntervalSet> sets = new ArrayList<IntervalSet>();
 
 		// dump states, count edges and collect sets while doing so
 		IntegerList nonGreedyStates = new IntegerList();
@@ -94,7 +111,7 @@ public class ATNSerializer {
 				nonGreedyStates.add(s.stateNumber);
 			}
 
-			if (s instanceof RuleStartState && ((RuleStartState)s).isLeftRecursiveRule) {
+			if (s instanceof RuleStartState && ((RuleStartState)s).isPrecedenceRule) {
 				precedenceStates.add(s.stateNumber);
 			}
 
@@ -124,7 +141,10 @@ public class ATNSerializer {
 				int edgeType = Transition.serializationTypes.get(t.getClass());
 				if ( edgeType == Transition.SET || edgeType == Transition.NOT_SET ) {
 					SetTransition st = (SetTransition)t;
-					sets.put(st.set, true);
+					if (!setIndices.containsKey(st.set)) {
+						sets.add(st.set);
+						setIndices.put(st.set, sets.size() - 1);
+					}
 				}
 			}
 		}
@@ -163,41 +183,34 @@ public class ATNSerializer {
 				data.add(modeStartState.stateNumber);
 			}
 		}
-		List<IntervalSet> bmpSets = new ArrayList<>();
-		List<IntervalSet> smpSets = new ArrayList<>();
-		for (IntervalSet set : sets.keySet()) {
-			if (set.getMaxElement() <= Character.MAX_VALUE) {
-				bmpSets.add(set);
+
+		int nsets = sets.size();
+		data.add(nsets);
+		for (IntervalSet set : sets) {
+			boolean containsEof = set.contains(Token.EOF);
+			if (containsEof && set.getIntervals().get(0).b == Token.EOF) {
+				data.add(set.getIntervals().size() - 1);
 			}
 			else {
-				smpSets.add(set);
+				data.add(set.getIntervals().size());
 			}
-		}
-		serializeSets(
-			data,
-			bmpSets,
-			new CodePointSerializer() {
-				@Override
-				public void serializeCodePoint(IntegerList data, int cp) {
-					data.add(cp);
+
+			data.add(containsEof ? 1 : 0);
+			for (Interval I : set.getIntervals()) {
+				if (I.a == Token.EOF) {
+					if (I.b == Token.EOF) {
+						continue;
+					}
+					else {
+						data.add(0);
+					}
 				}
-			});
-		serializeSets(
-			data,
-			smpSets,
-			new CodePointSerializer() {
-				@Override
-				public void serializeCodePoint(IntegerList data, int cp) {
-					serializeInt(data, cp);
+				else {
+					data.add(I.a);
 				}
-			});
-		Map<IntervalSet, Integer> setIndices = new HashMap<>();
-		int setIndex = 0;
-		for (IntervalSet bmpSet : bmpSets) {
-			setIndices.put(bmpSet, setIndex++);
-		}
-		for (IntervalSet smpSet : smpSets) {
-			setIndices.put(smpSet, setIndex++);
+
+				data.add(I.b);
+			}
 		}
 
 		data.add(nedges);
@@ -354,16 +367,10 @@ public class ATNSerializer {
 			}
 		}
 
-		// Note: This value shifting loop is documented in ATNDeserializer.
 		// don't adjust the first value since that's the version number
 		for (int i = 1; i < data.size(); i++) {
 			if (data.get(i) < Character.MIN_VALUE || data.get(i) > Character.MAX_VALUE) {
-				throw new UnsupportedOperationException("Serialized ATN data element "+
-					                                        data.get(i)+
-					                                        " element "+i+" out of range "+
-					                                        (int)Character.MIN_VALUE+
-					                                        ".."+
-					                                        (int)Character.MAX_VALUE);
+				throw new UnsupportedOperationException("Serialized ATN data element out of range.");
 			}
 
 			int value = (data.get(i) + 2) & 0xFFFF;
@@ -371,42 +378,6 @@ public class ATNSerializer {
 		}
 
 		return data;
-	}
-
-	private static void serializeSets(
-			IntegerList data,
-			Collection<IntervalSet> sets,
-			CodePointSerializer codePointSerializer)
-	{
-		int nSets = sets.size();
-		data.add(nSets);
-
-		for (IntervalSet set : sets) {
-			boolean containsEof = set.contains(Token.EOF);
-			if (containsEof && set.getIntervals().get(0).b == Token.EOF) {
-				data.add(set.getIntervals().size() - 1);
-			}
-			else {
-				data.add(set.getIntervals().size());
-			}
-
-			data.add(containsEof ? 1 : 0);
-			for (Interval I : set.getIntervals()) {
-				if (I.a == Token.EOF) {
-					if (I.b == Token.EOF) {
-						continue;
-					}
-					else {
-						codePointSerializer.serializeCodePoint(data, 0);
-					}
-				}
-				else {
-					codePointSerializer.serializeCodePoint(data, I.a);
-				}
-
-				codePointSerializer.serializeCodePoint(data, I.b);
-			}
-		}
 	}
 
 	public String decode(char[] data) {
@@ -456,12 +427,6 @@ public class ATNSerializer {
 				.append(ATNState.serializationNames.get(stype)).append(" ")
 				.append(ruleIndex).append(arg).append("\n");
 		}
-		// this code is meant to model the form of ATNDeserializer.deserialize,
-		// since both need to be updated together whenever a change is made to
-		// the serialization format. The "dead" code is only used in debugging
-		// and testing scenarios, so the form you see here was kept for
-		// improved maintainability.
-		// start
 		int numNonGreedyStates = ATNDeserializer.toInt(data[p++]);
 		for (int i = 0; i < numNonGreedyStates; i++) {
 			int stateNumber = ATNDeserializer.toInt(data[p++]);
@@ -470,7 +435,6 @@ public class ATNSerializer {
 		for (int i = 0; i < numPrecedenceStates; i++) {
 			int stateNumber = ATNDeserializer.toInt(data[p++]);
 		}
-		// finish
 		int nrules = ATNDeserializer.toInt(data[p++]);
 		for (int i=0; i<nrules; i++) {
 			int s = ATNDeserializer.toInt(data[p++]);
@@ -487,10 +451,25 @@ public class ATNSerializer {
 			int s = ATNDeserializer.toInt(data[p++]);
 			buf.append("mode ").append(i).append(":").append(s).append('\n');
 		}
-		int numBMPSets = ATNDeserializer.toInt(data[p++]);
-		p = appendSets(buf, data, p, numBMPSets, 0, ATNDeserializer.getUnicodeDeserializer(ATNDeserializer.UnicodeDeserializingMode.UNICODE_BMP));
-		int numSMPSets = ATNDeserializer.toInt(data[p++]);
-		p = appendSets(buf, data, p, numSMPSets, numBMPSets, ATNDeserializer.getUnicodeDeserializer(ATNDeserializer.UnicodeDeserializingMode.UNICODE_SMP));
+		int nsets = ATNDeserializer.toInt(data[p++]);
+		for (int i=0; i<nsets; i++) {
+			int nintervals = ATNDeserializer.toInt(data[p++]);
+			buf.append(i).append(":");
+			boolean containsEof = data[p++] != 0;
+			if (containsEof) {
+				buf.append(getTokenName(Token.EOF));
+			}
+
+			for (int j=0; j<nintervals; j++) {
+				if ( containsEof || j>0 ) {
+					buf.append(", ");
+				}
+
+				buf.append(getTokenName(ATNDeserializer.toInt(data[p]))).append("..").append(getTokenName(ATNDeserializer.toInt(data[p + 1])));
+				p += 2;
+			}
+			buf.append("\n");
+		}
 		int nedges = ATNDeserializer.toInt(data[p++]);
 		for (int i=0; i<nedges; i++) {
 			int src = ATNDeserializer.toInt(data[p]);
@@ -511,44 +490,14 @@ public class ATNSerializer {
 			buf.append(i).append(":").append(s).append("\n");
 		}
 		if (atn.grammarType == ATNType.LEXER) {
-			// this code is meant to model the form of ATNDeserializer.deserialize,
-			// since both need to be updated together whenever a change is made to
-			// the serialization format. The "dead" code is only used in debugging
-			// and testing scenarios, so the form you see here was kept for
-			// improved maintainability.
-			int lexerActionCount = ATNDeserializer.toInt(data[p++]);
-			for (int i = 0; i < lexerActionCount; i++) {
-				LexerActionType actionType = LexerActionType.values()[ATNDeserializer.toInt(data[p++])];
-				int data1 = ATNDeserializer.toInt(data[p++]);
-				int data2 = ATNDeserializer.toInt(data[p++]);
-			}
+				int lexerActionCount = ATNDeserializer.toInt(data[p++]);
+				for (int i = 0; i < lexerActionCount; i++) {
+					LexerActionType actionType = LexerActionType.values()[ATNDeserializer.toInt(data[p++])];
+					int data1 = ATNDeserializer.toInt(data[p++]);
+					int data2 = ATNDeserializer.toInt(data[p++]);
+				}
 		}
 		return buf.toString();
-	}
-
-	private int appendSets(StringBuilder buf, char[] data, int p, int nsets, int setIndexOffset, ATNDeserializer.UnicodeDeserializer unicodeDeserializer) {
-		for (int i=0; i<nsets; i++) {
-			int nintervals = ATNDeserializer.toInt(data[p++]);
-			buf.append(i+setIndexOffset).append(":");
-			boolean containsEof = data[p++] != 0;
-			if (containsEof) {
-				buf.append(getTokenName(Token.EOF));
-			}
-
-			for (int j=0; j<nintervals; j++) {
-				if ( containsEof || j>0 ) {
-					buf.append(", ");
-				}
-
-				int a = unicodeDeserializer.readUnicode(data, p);
-				p += unicodeDeserializer.size();
-				int b = unicodeDeserializer.readUnicode(data, p);
-				p += unicodeDeserializer.size();
-				buf.append(getTokenName(a)).append("..").append(getTokenName(b));
-			}
-			buf.append("\n");
-		}
-		return p;
 	}
 
 	public String getTokenName(int t) {
