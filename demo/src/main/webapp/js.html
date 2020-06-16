@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<script src='lib/require.js'></script>
+<script>
+    var antlr4 = require('antlr4/index');
+    var Python3Lexer = require('./Python3Lexer').Python3Lexer;
+    var Python3Parser = require('./Python3Parser').Python3Parser;
+    var Python3Listener = require('./Python3Listener').Python3Listener;
+
+  
+ </script>
+</head>
+<body>
+<textarea rows="5" cols="" id=code style="width: 100%">a = 1
+</textarea>
+<input value="1000"  id=ccc />
+<button onclick="do_antlr()" id=abc >ok</button>
+<script>
+    function do_antlr() {
+    	t=new Date();
+    	
+    	         var input = document.getElementById('code').value;
+    	         var c = parseInt(document.getElementById('ccc').value);
+    	       for(i=0;i<c;i++){
+    	
+    	       
+    		    var chars = new antlr4.InputStream(input);
+    		    var lexer = new Python3Lexer(chars);
+    		    var tokens  = new antlr4.CommonTokenStream(lexer);
+    		    var parser = new Python3Parser(tokens);
+    		    parser.buildParseTrees = true;
+    		    var tree = parser.file_input();
+    	
+    	       }
+    	
+    	
+    	alert(new Date() -t);
+		
+	}
+ </script>
+</body>
+</html>

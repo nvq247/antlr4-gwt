@@ -1,13 +1,16 @@
 package org.antlr4gwt.demo.client;
 
 import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr4gwt.demo.shared.grammar.SimpleGLexer;
-import org.antlr4gwt.demo.shared.grammar.SimpleGParser;
+import org.antlr.v4.runtime.CommonTokenStream; 
+import org.antlr4gwt.demo.shared.grammar.Python3Lexer;
+import org.antlr4gwt.demo.shared.grammar.Python3Parser;
+import org.antlr4gwt.demo.shared.grammar.Python3Parser.File_inputContext;
+import org.antlr4gwt.demo.shared.grammar.Python3ToJs;
 
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
@@ -21,7 +24,8 @@ public class SimpleDemo implements EntryPoint {
 		
 		// You type your code here
 		final TextArea code = new TextArea();
-		code.setWidth("500px");
+		final TextArea time = new TextArea();
+		code.setWidth("100%");
 		code.setText(good);
 		
 		// Result label (ok or ko)
@@ -29,7 +33,7 @@ public class SimpleDemo implements EntryPoint {
 		Button checkButton = new Button("Check", new ClickHandler() {
 			@Override
 			public void onClick(ClickEvent event) {
-				SimpleGParser parser = dummyParser(code.getText());
+				Python3Parser parser = dummyParser(code.getText(),Integer.parseInt(time.getValue().trim()));
 				if (parser.getNumberOfSyntaxErrors() > 0) {
 					result.setText("KO -- There is " + parser.getNumberOfSyntaxErrors() + " syntax errors");
 				} else {
@@ -37,21 +41,36 @@ public class SimpleDemo implements EntryPoint {
 				}
 			}
 		});
-		
+		time.setValue("1000");
 		// Should not use vertical panel
 		VerticalPanel panel = new VerticalPanel();
 		panel.add(code);
+		panel.add(time);
 		panel.add(checkButton);
 		panel.add(result);
 		RootPanel.get("main").add(panel);
 	}
 	
-	SimpleGParser dummyParser(String txt) {
-		SimpleGLexer lexer = new SimpleGLexer(new ANTLRInputStream(txt));
-		CommonTokenStream tokens = new CommonTokenStream(lexer);
-		SimpleGParser parser = new SimpleGParser(tokens);
-		// Actually launch the parsing
-		parser.root();
+	Python3Parser dummyParser(String txt,int tn) {
+		long t=System.currentTimeMillis();
+		Python3Parser parser=null;
+		File_inputContext tree=null;
+		for(int i=0;i<tn;i++) {
+			Python3Lexer lexer = new Python3Lexer(new ANTLRInputStream(txt));
+			
+			CommonTokenStream tokens = new CommonTokenStream(lexer);
+			 parser = new Python3Parser(tokens);
+		 
+			// Actually launch the parsing
+			parser.setBuildParseTree(true);
+			
+			 tree = parser.file_input();
+		}
+		Object js = tree.accept(new Py2Ph());
+		
+		t=System.currentTimeMillis()-t;
+		Window.alert(t+" "+js.toString());
+		
 		return parser;
 	}
 }
