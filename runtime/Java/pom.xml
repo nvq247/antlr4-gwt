@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.antlr</groupId>
 		<artifactId>antlr4gwt-master</artifactId>
-		<version>4.4.8</version>
+		<version>4.8.2</version>
 		<relativePath>../..</relativePath>
 	</parent>
 
@@ -20,6 +20,7 @@
 	</properties>
 
 	<dependencies>
+
 		<dependency>
 			<groupId>org.abego.treelayout</groupId>
 			<artifactId>org.abego.treelayout.core</artifactId>
@@ -33,8 +34,24 @@
 			<version>${project.version}</version>
 			<scope>compile</scope>
 		</dependency>
+		<dependency>
+		<groupId>org.treblereel.gwt.nio</groupId>
+		<artifactId>gwt-nio</artifactId>
+		<version>1.0</version>
+	</dependency>
 	</dependencies>
-
+<repositories>
+	<repository>
+		<id>oss.sonatype.org-snapshot</id>
+		<url>http://oss.sonatype.org/content/repositories/snapshots</url>
+		<releases>
+			<enabled>false</enabled>
+		</releases>
+		<snapshots>
+			<enabled>true</enabled>
+		</snapshots>
+	</repository>
+</repositories>
 	<profiles>
 		<profile>
 			<id>sonatype-oss-release</id>
